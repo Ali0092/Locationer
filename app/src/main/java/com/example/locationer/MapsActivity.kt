@@ -6,6 +6,7 @@ import android.content.pm.PackageManager
 import android.location.Geocoder
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
+import android.os.Looper
 import android.widget.Toast
 import androidx.core.app.ActivityCompat
 import com.example.locationer.Constants.REQUEST_CODE
@@ -24,9 +25,13 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback {
 
     private lateinit var mMap: GoogleMap
     private lateinit var binding: ActivityMapsBinding
+    private var requestingLocationUpdates = false
 
-    //Variables Declaration for the FusedLocationProviderClient...
+    //Variables Declaration for the FusedLocationProviderClient and LocationCallback...
     private lateinit var fusedLocationProvider: FusedLocationProviderClient
+    private lateinit var locationCallback: LocationCallback
+    private lateinit var locationRequest: LocationRequest
+
 
     @SuppressLint("MissingPermission")
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -41,11 +46,41 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback {
         binding.flbtn.setOnClickListener {
             getLocation()
         }
+        locationRequest = LocationRequest.create().apply {
+            interval = 10000
+            fastestInterval = 5000
+            priority = LocationRequest.PRIORITY_HIGH_ACCURACY
+        }
+        locationCallback = object : LocationCallback() {
+            override fun onLocationResult(locationResult: LocationResult) {
+                super.onLocationResult(locationResult)
+                locationResult?:return
+                for (L in locationResult.locations) {
+                    val name = LatLng(L.latitude, L.longitude)
+                    mMap.addMarker(MarkerOptions().position(name).title("Marker in Sydney"))
+                    mMap.moveCamera(CameraUpdateFactory.newLatLng(name))
+                }
+            }
+        }
+
         // Obtain the SupportMapFragment and get notified when the map is ready to be used.
         val mapFragment = supportFragmentManager
             .findFragmentById(R.id.map) as SupportMapFragment
         mapFragment.getMapAsync(this)
 
+    }
+
+    //to start getting location updates on Resume...
+    override fun onResume() {
+        super.onResume()
+        //Definition of requestingLocationUpdates...
+        if (requestingLocationUpdates) startLocationUpdates()
+    }
+
+    //to stop getting updates of Location On Pause...
+    override fun onPause() {
+        super.onPause()
+        fusedLocationProvider.removeLocationUpdates(locationCallback)
     }
 
     override fun onMapReady(googleMap: GoogleMap) {
@@ -62,9 +97,9 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback {
         PermissionGranted()
         fusedLocationProvider.lastLocation.addOnSuccessListener { location ->
             if (location != null) {
-                val place=LatLng(location.latitude,location.longitude)
-                val temp=Geocoder(this, Locale.ENGLISH)
-                val name=temp.getFromLocation(location.latitude,location.longitude,10)
+                val place = LatLng(location.latitude, location.longitude)
+                val temp = Geocoder(this, Locale.ENGLISH)
+                val name = temp.getFromLocation(location.latitude, location.longitude, 10)
                 mMap.addMarker(MarkerOptions().position(place).title("Marker in nowhere"))
                 mMap.moveCamera(CameraUpdateFactory.newLatLng(place))
                 Toast.makeText(
@@ -101,4 +136,15 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback {
 
         } else false
     }
+
+    @SuppressLint("MissingPermission")
+    private fun startLocationUpdates() {
+        fusedLocationProvider.requestLocationUpdates(
+            locationRequest,
+            locationCallback,
+            Looper.getMainLooper()
+        )
+    }
+
+
 }
