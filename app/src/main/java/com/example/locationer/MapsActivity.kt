@@ -7,6 +7,7 @@ import android.location.Geocoder
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import android.os.Looper
+import android.util.Log
 import android.widget.Toast
 import androidx.core.app.ActivityCompat
 import com.example.locationer.Constants.REQUEST_CODE
@@ -23,9 +24,9 @@ import java.util.*
 
 class MapsActivity : AppCompatActivity(), OnMapReadyCallback {
 
+    //SaveInstances testing ...is pending...
     private lateinit var mMap: GoogleMap
     private lateinit var binding: ActivityMapsBinding
-    private var requestingLocationUpdates = false
 
     //Variables Declaration for the FusedLocationProviderClient and LocationCallback...
     private lateinit var fusedLocationProvider: FusedLocationProviderClient
@@ -45,6 +46,7 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback {
 
         binding.flbtn.setOnClickListener {
             getLocation()
+
         }
         locationRequest = LocationRequest.create().apply {
             interval = 10000
@@ -68,13 +70,6 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback {
             .findFragmentById(R.id.map) as SupportMapFragment
         mapFragment.getMapAsync(this)
 
-    }
-
-    //to start getting location updates on Resume...
-    override fun onResume() {
-        super.onResume()
-        //Definition of requestingLocationUpdates...
-        if (requestingLocationUpdates) startLocationUpdates()
     }
 
     //to stop getting updates of Location On Pause...
@@ -102,10 +97,14 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback {
                 val name = temp.getFromLocation(location.latitude, location.longitude, 10)
                 mMap.addMarker(MarkerOptions().position(place).title("Marker in nowhere"))
                 mMap.moveCamera(CameraUpdateFactory.newLatLng(place))
+
+                //the shareIntentService should be called here....
+
                 Toast.makeText(
-                    this, "${name[0].getAddressLine(0)}", Toast.LENGTH_LONG
+                    this, name[0].getAddressLine(0), Toast.LENGTH_LONG
                 ).show()
             } else {
+                startLocationUpdates()
                 Toast.makeText(
                     this, "location Unavailable", Toast.LENGTH_LONG
                 ).show()

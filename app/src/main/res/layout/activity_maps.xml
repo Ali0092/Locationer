@@ -25,6 +25,8 @@
             android:id="@+id/flbtn"
             android:layout_width="50dp"
             android:layout_height="50dp"
+            android:src="@drawable/ic_baseline_my_location_24"
+            map:fabCustomSize="48dp"
             android:layout_marginBottom="30dp"
             android:layout_marginRight="30dp"
             map:layout_constraintBottom_toBottomOf="parent"
