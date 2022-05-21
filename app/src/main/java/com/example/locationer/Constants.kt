@@ -1,5 +1,5 @@
 package com.example.locationer
 
 object Constants {
-    const val REQUEST_CODE=1
+    const val REQUEST_CODE=99
 }
