@@ -3,31 +3,28 @@ package com.example.locationer
 import android.Manifest
 import android.annotation.SuppressLint
 import android.content.pm.PackageManager
-import android.location.Geocoder
 import android.location.Location
 import android.os.Build
-import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
-import android.os.Looper
 import android.util.Log
-import android.widget.Switch
 import android.widget.Toast
+import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import com.example.locationer.Constants.REQUEST_CODE
-
+import com.example.locationer.databinding.ActivityMapsBinding
+import com.google.android.gms.common.ConnectionResult
+import com.google.android.gms.common.api.GoogleApiClient
+import com.google.android.gms.location.LocationListener
+import com.google.android.gms.location.LocationRequest
+import com.google.android.gms.location.LocationServices
 import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.GoogleMap
 import com.google.android.gms.maps.OnMapReadyCallback
 import com.google.android.gms.maps.SupportMapFragment
 import com.google.android.gms.maps.model.LatLng
-import com.google.android.gms.maps.model.MarkerOptions
-import com.example.locationer.databinding.ActivityMapsBinding
-import com.google.android.gms.common.ConnectionResult
-import com.google.android.gms.common.api.GoogleApi
-import com.google.android.gms.common.api.GoogleApiClient
-import com.google.android.gms.location.*
 import com.google.android.gms.maps.model.Marker
+import com.google.android.gms.maps.model.MarkerOptions
 import java.util.*
 
 class MapsActivity : AppCompatActivity(), OnMapReadyCallback ,
@@ -43,7 +40,7 @@ GoogleApiClient.ConnectionCallbacks,
     private lateinit var locationRequest: LocationRequest
     private lateinit var lastLocation:Location
     private lateinit var currentLocationMarker:Marker
-
+    private val ProximityRadius = 10000
 
     @SuppressLint("MissingPermission")
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -66,6 +63,11 @@ GoogleApiClient.ConnectionCallbacks,
 
     override fun onMapReady(googleMap: GoogleMap) {
         mMap = googleMap
+        val getNearbyPlace:GetNearbyLocation = GetNearbyLocation()
+
+
+
+
         if (ActivityCompat.checkSelfPermission(
                 this,
                 Manifest.permission.ACCESS_FINE_LOCATION
@@ -75,6 +77,10 @@ GoogleApiClient.ConnectionCallbacks,
             ) == PackageManager.PERMISSION_GRANTED
         ) {
             buildGoogleApiClient()
+            mMap.clear();
+            val url=getURL(lastLocation.latitude,lastLocation.longitude,"hospital")
+            val dataTransfer= arrayOf(mMap,url)
+            getNearbyPlace.execute(dataTransfer)
             mMap.isMyLocationEnabled=true
         }
 
@@ -175,6 +181,42 @@ GoogleApiClient.ConnectionCallbacks,
 
         } else false
     }
+
+
+    fun getURL(lat:Double,lon:Double,name:String):String{
+        val googleURL =
+            StringBuilder("https://maps.googleapis.com/maps/api/place/nearbysearch/json?")
+        googleURL.append("location=" + lat.toString() + "," + lon)
+        googleURL.append("&radius=$ProximityRadius")
+        googleURL.append("&type=$name")
+        googleURL.append("&sensor=true")
+        googleURL.append("&key=" + "AIzaSyDtIWXQDUA1ufc_Vff3qbz522DnZ26Nk9w")
+
+        Log.d("GoogleMapsActivity", "url = $googleURL")
+
+        return googleURL.toString()
+    }
+
+
+
+
+    //Method to search the location....
+    /*
+    val address=binding.Searchbar.text.toString()
+    val geoCoder=GeoCoder()
+    try{
+    val addressList:List<Address>=geoCoder.getFromLocationName(address, 10)
+    }catch(e:Exception){
+    e.printStackTrace()
+    }
+
+    val latlng=LatLng(addressList[0].latitude,addressList[0].longitude)
+        val markerOptions=MarkerOptions().position(latLng)
+        markerOptions.title("Current Location...")
+        currentLocationMarker= mMap.addMarker(markerOptions)!!
+        mMap.moveCamera(CameraUpdateFactory.newLatLng(latLng))
+
+    * */
 }
 
 
