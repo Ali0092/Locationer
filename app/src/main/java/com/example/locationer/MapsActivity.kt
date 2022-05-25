@@ -4,6 +4,7 @@ import android.Manifest
 import android.annotation.SuppressLint
 import android.content.ContentValues.TAG
 import android.content.pm.PackageManager
+import android.icu.text.DateTimePatternGenerator.PatternInfo.OK
 import android.location.Location
 import android.os.Build
 import android.os.Bundle
@@ -19,8 +20,8 @@ import com.example.locationer.Constants.RADIUS
 import com.example.locationer.Constants.REQUEST_CODE
 import com.example.locationer.Constants.TYPE
 import com.example.locationer.databinding.ActivityMapsBinding
-import com.example.locationer.model.nearbysearch.NearbySearch
 import com.example.locationer.model.PlaceData
+import com.example.locationer.model.nearbysearch.NearbySearch
 import com.google.android.gms.location.FusedLocationProviderClient
 import com.google.android.gms.location.LocationServices
 import com.google.android.gms.maps.CameraUpdateFactory
@@ -35,6 +36,8 @@ import com.google.android.libraries.places.api.Places
 import com.google.android.libraries.places.api.model.Place
 import com.google.android.libraries.places.api.net.FindCurrentPlaceRequest
 import com.google.android.libraries.places.api.net.PlacesClient
+import okhttp3.OkHttpClient
+import okhttp3.Request
 import retrofit2.Call
 import retrofit2.Response
 import java.util.*
@@ -108,7 +111,6 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback {
         updateLocationUI()
         showCurrentPlace()
         getDeviceLocation()
-        getAllNearbyPlaces()
     }
 
     //get the current location and set the set the position of the map...
@@ -129,6 +131,8 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback {
                                     ), DEFAULT_ZOOM.toFloat()
                                 )
                             )
+                          //  Log.d("LastLocation","${lastKnownLocation!!.latitude}, ${lastKnownLocation!!.longitude}")
+
                             map?.addMarker(
                                 MarkerOptions().position(
                                     LatLng(
@@ -139,6 +143,8 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback {
                             )
                             lastLatLng =
                                 LatLng(lastKnownLocation!!.latitude, lastKnownLocation!!.longitude)
+                            getAllNearbyPlaces()
+
                         } else {
                             Log.d(TAG, "Current location is null. Using defaults.")
                             map?.moveCamera(
@@ -252,7 +258,9 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback {
 
     private fun getAllNearbyPlaces() {
 
-        val position = getLotLong()
+        val temp = getLotLong()
+        val position=temp.latitude.toString()+","+temp.longitude.toString()
+        //val position=LatLng(defaultLocation.latitude,defaultLocation.longitude)
         val placesCall =
             RetrofitClient.getPlacesAPI().getNearbyPlaces(position, RADIUS, TYPE, API_KEY)
         placesCall.enqueue(object : retrofit2.Callback<NearbySearch> {
@@ -260,20 +268,25 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback {
             override fun onResponse(call: Call<NearbySearch>, response: Response<NearbySearch>) {
                 val nearbySearch = response.body()!!
 
-                if (response.isSuccessful) {
+                if (nearbySearch.status=="OK") {
                     val placesData = ArrayList<PlaceData>()
                     try {
-                        for (resultItems in nearbySearch.result!!) {
-                            val place = PlaceData(resultItems.name, resultItems.lat, resultItems.lon)
+
+                        for (resultItems in nearbySearch.results) {
+                            val lat = resultItems.geometry.location.lat
+                            val lon = resultItems.geometry.location.lng
+                            val place = PlaceData(resultItems.name, lat, lon)
                             placesData.add(place)
                         }
+                       // Toast.makeText(this@MapsActivity, placesData.size.toString(), Toast.LENGTH_LONG).show()
+
                         setMarkerAndZoom(placesData)
-                    }catch (e:NullPointerException){
+                    } catch (e: NullPointerException) {
                         Toast.makeText(this@MapsActivity, e.toString(), Toast.LENGTH_LONG).show()
                     }
 
                 } else {
-                    Toast.makeText(this@MapsActivity,"NULL ARRAY...", Toast.LENGTH_LONG).show()
+                    Toast.makeText(this@MapsActivity, nearbySearch.status, Toast.LENGTH_LONG).show()
                 }
 
             }
@@ -287,17 +300,20 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback {
     }
 
     fun setMarkerAndZoom(places: List<PlaceData>) {
+
         for (place in places) {
             val name = place.name
             val lat = place.lat
             val lon = place.lon
             val position = LatLng(lat!!, lon!!)
             val markerOptions = MarkerOptions()
-            val marker = map!!.addMarker(markerOptions.position(position).title(name))
+            markerOptions.position(position).title(name)
 
+            val marker = map!!.addMarker(markerOptions)
             mSpotMarkerList.add(marker!!)
-
+            Toast.makeText(this@MapsActivity, "check...", Toast.LENGTH_LONG).show()
         }
+    //    map!!.animateCamera(CameraUpdateFactory.newLatLngZoom(getLotLong(), 500f))
     }
 
     //to get the Latitude and Longitude...
@@ -309,5 +325,17 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback {
             temp = defaultLocation
         }
         return temp
+    }
+
+    fun getDesiredLocation(){
+        val client = OkHttpClient().newBuilder()
+            .build()
+        val request: Request = Request.Builder()
+            .url("https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=-33.8670522%2C151.1957362&radius=1500&type=restaurant&keyword=cruise&key=$API_KEY")
+            .method("GET", null)
+            .build()
+        val response: okhttp3.Response = client.newCall(request).execute()
+
+        val nearbySearch=response.body()
     }
 }

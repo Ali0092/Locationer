@@ -3,6 +3,8 @@
   <component name="DesignSurface">
     <option name="filePathToZoomLevelMap">
       <map>
+        <entry key="..\:/ANDROID/Locationer/app/src/main/res/drawable/ic_baseline_my_location_24.xml" value="0.1295" />
+        <entry key="..\:/ANDROID/Locationer/app/src/main/res/drawable/ic_baseline_place_24.xml" value="0.1295" />
         <entry key="..\:/ANDROID/Locationer/app/src/main/res/layout/activity_maps.xml" value="0.29814814814814816" />
       </map>
     </option>
