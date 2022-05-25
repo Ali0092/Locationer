@@ -3,7 +3,6 @@ package com.example.locationer
 import android.Manifest
 import android.annotation.SuppressLint
 import android.content.ContentValues.TAG
-import android.content.Context
 import android.content.pm.PackageManager
 import android.location.Location
 import android.os.Build
@@ -14,14 +13,13 @@ import androidx.annotation.RequiresApi
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
-import com.example.locationer.API.PlacesApi
 import com.example.locationer.API.RetrofitClient
 import com.example.locationer.Constants.API_KEY
 import com.example.locationer.Constants.RADIUS
 import com.example.locationer.Constants.REQUEST_CODE
 import com.example.locationer.Constants.TYPE
 import com.example.locationer.databinding.ActivityMapsBinding
-import com.example.locationer.model.NearbySearch
+import com.example.locationer.model.nearbysearch.NearbySearch
 import com.example.locationer.model.PlaceData
 import com.google.android.gms.location.FusedLocationProviderClient
 import com.google.android.gms.location.LocationServices
@@ -40,8 +38,6 @@ import com.google.android.libraries.places.api.net.PlacesClient
 import retrofit2.Call
 import retrofit2.Response
 import java.util.*
-import javax.security.auth.callback.Callback
-import kotlin.collections.ArrayList
 
 
 class MapsActivity : AppCompatActivity(), OnMapReadyCallback {
@@ -61,7 +57,7 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback {
 
     private var locationPermissionGranted = false
     private var lastKnownLocation: Location? = null
-    private var lastLatLng:LatLng?=null
+    private var lastLatLng: LatLng? = null
     private var cameraPosition: CameraPosition? = null
 
     //Default location...
@@ -79,7 +75,7 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback {
 
         if (savedInstanceState != null) {
             lastKnownLocation = savedInstanceState.getParcelable("location")
-            lastLatLng=savedInstanceState.getParcelable("latlng")
+            lastLatLng = savedInstanceState.getParcelable("latlng")
             cameraPosition = savedInstanceState.getParcelable("camera_position")
         }
 
@@ -101,7 +97,7 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback {
         if (map != null) {
             outState.putParcelable("camera_position", map!!.cameraPosition)
             outState.putParcelable("location", lastKnownLocation)
-            outState.putParcelable("latlng",lastLatLng)
+            outState.putParcelable("latlng", lastLatLng)
         }
         super.onSaveInstanceState(outState)
     }
@@ -141,7 +137,8 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback {
                                     )
                                 )
                             )
-                           lastLatLng=LatLng(lastKnownLocation!!.latitude,lastKnownLocation!!.longitude)
+                            lastLatLng =
+                                LatLng(lastKnownLocation!!.latitude, lastKnownLocation!!.longitude)
                         } else {
                             Log.d(TAG, "Current location is null. Using defaults.")
                             map?.moveCamera(
@@ -215,7 +212,7 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback {
                 map?.isMyLocationEnabled = true
                 map?.uiSettings?.isMyLocationButtonEnabled = true
                 lastKnownLocation = null
-                lastLatLng=null
+                lastLatLng = null
                 getLocationPermission()
             }
         } catch (e: SecurityException) {
@@ -231,7 +228,6 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback {
             return
         }
         if (locationPermissionGranted) {
-            Toast.makeText(this, "permission granted...", Toast.LENGTH_LONG).show()
             // Use fields to define the data types to return.
             val placeFields: List<Place.Field> = Arrays.asList(
                 Place.Field.NAME, Place.Field.ADDRESS,
@@ -254,45 +250,50 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback {
         }
     }
 
-    private fun getAllNearbyPlaces(){
+    private fun getAllNearbyPlaces() {
 
-        Toast.makeText(this,"Check...",Toast.LENGTH_LONG).show()
-        val position=getLotLong()
-        val placesCall=RetrofitClient.getPlacesAPI().getNearbyPlaces(position, RADIUS, TYPE, API_KEY)
-        placesCall.enqueue(object : retrofit2.Callback<NearbySearch>{
+        val position = getLotLong()
+        val placesCall =
+            RetrofitClient.getPlacesAPI().getNearbyPlaces(position, RADIUS, TYPE, API_KEY)
+        placesCall.enqueue(object : retrofit2.Callback<NearbySearch> {
 
             override fun onResponse(call: Call<NearbySearch>, response: Response<NearbySearch>) {
-                val nearbySearch=response.body()!!
+                val nearbySearch = response.body()!!
 
-                if(nearbySearch.statusCodes.equals(RESULT_OK)){
-                    val placesData=ArrayList<PlaceData>()
-
-                    for(resultItems in nearbySearch.result){
-                        val place=PlaceData(resultItems.name,resultItems.lat,resultItems.lon)
-                        placesData.add(place)
+                if (response.isSuccessful) {
+                    val placesData = ArrayList<PlaceData>()
+                    try {
+                        for (resultItems in nearbySearch.result!!) {
+                            val place = PlaceData(resultItems.name, resultItems.lat, resultItems.lon)
+                            placesData.add(place)
+                        }
+                        setMarkerAndZoom(placesData)
+                    }catch (e:NullPointerException){
+                        Toast.makeText(this@MapsActivity, e.toString(), Toast.LENGTH_LONG).show()
                     }
-                    setMarkerAndZoom(placesData)
-                }else{
-                    Log.d("Status_Code", nearbySearch.statusCodes.toString())
+
+                } else {
+                    Toast.makeText(this@MapsActivity,"NULL ARRAY...", Toast.LENGTH_LONG).show()
                 }
+
             }
 
             override fun onFailure(call: Call<NearbySearch>, t: Throwable) {
-                Log.d("Status_Code",t.toString())
+                Toast.makeText(this@MapsActivity, "Response Failure...", Toast.LENGTH_LONG).show()
             }
 
         })
 
     }
 
-    fun setMarkerAndZoom(places:List<PlaceData>){
-        for(place in places){
-            val name=place.name
-            val lat=place.lat
-            val lon=place.lon
-            val position=LatLng(lat!!,lon!!)
-            val markerOptions=MarkerOptions()
-            val marker=map!!.addMarker(markerOptions.position(position).title(name))
+    fun setMarkerAndZoom(places: List<PlaceData>) {
+        for (place in places) {
+            val name = place.name
+            val lat = place.lat
+            val lon = place.lon
+            val position = LatLng(lat!!, lon!!)
+            val markerOptions = MarkerOptions()
+            val marker = map!!.addMarker(markerOptions.position(position).title(name))
 
             mSpotMarkerList.add(marker!!)
 
@@ -300,13 +301,13 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback {
     }
 
     //to get the Latitude and Longitude...
-    fun getLotLong():LatLng{
-        val temp:LatLng
-       if(lastKnownLocation!=null){
-           temp=lastLatLng!!
-       }else{
-           temp=defaultLocation
-       }
+    fun getLotLong(): LatLng {
+        val temp: LatLng
+        if (lastKnownLocation != null) {
+            temp = lastLatLng!!
+        } else {
+            temp = defaultLocation
+        }
         return temp
     }
 }
