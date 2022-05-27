@@ -84,9 +84,11 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback {
 
         setContentView(binding.root)
 
+        //Initializing Places class that gives the place and PlaceClient that enables to get the places
         Places.initialize(this, API_KEY)
         placesClient = Places.createClient(this)
 
+        //fused LocationProvider to get the location service
         fusedLocationProviderClient = LocationServices.getFusedLocationProviderClient(this)
 
         // Obtain the SupportMapFragment and get notified when the map is ready to be used.
@@ -108,9 +110,9 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback {
     //OnMapReady Function call back handles the map when it is ready...
     override fun onMapReady(googleMap: GoogleMap) {
         map = googleMap
-        updateLocationUI()
-        showCurrentPlace()
-        getDeviceLocation()
+        updateLocationUI() //UI Updater
+        showCurrentPlace() //function that shows the current place
+        getDeviceLocation() //the function that get the current device location ....
     }
 
     //get the current location and set the set the position of the map...
@@ -256,6 +258,7 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback {
         }
     }
 
+    //Function that gets all the nearby locations of the desired type...
     private fun getAllNearbyPlaces() {
 
         val temp = getLotLong()
@@ -299,6 +302,7 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback {
 
     }
 
+    //function that sets the marker to different places...
     fun setMarkerAndZoom(places: List<PlaceData>) {
 
         for (place in places) {
@@ -327,15 +331,5 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback {
         return temp
     }
 
-    fun getDesiredLocation(){
-        val client = OkHttpClient().newBuilder()
-            .build()
-        val request: Request = Request.Builder()
-            .url("https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=-33.8670522%2C151.1957362&radius=1500&type=restaurant&keyword=cruise&key=$API_KEY")
-            .method("GET", null)
-            .build()
-        val response: okhttp3.Response = client.newCall(request).execute()
-
-        val nearbySearch=response.body()
-    }
+    
 }
